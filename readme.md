@@ -18,4 +18,4 @@ Hattip to @jprctr for the base pixel sorting code.
 ###Inspirations###
 * Sabrina Ratté's [video](https://www.youtube.com/watch?v=EEmgEAp8hSI) for Tim Hecker's Black Refraction.
 
-![sample-image][sample_output.jpg]
+![sample-image](sample_output.jpg)
