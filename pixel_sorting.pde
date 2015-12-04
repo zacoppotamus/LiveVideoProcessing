@@ -21,6 +21,14 @@ int loops = 1;
 int width = 1280;
 int height = 720;
 
+// Path of unedited frames
+String[] frames;
+
+// Live Parameters
+int threshold = 60;
+int density = 1;
+int mode = 0;
+
 int[] offset = {int(random(500000, 50000)), int(random(200000, 200000))};
 
 boolean saved = false;
@@ -40,7 +48,7 @@ int[] traversed = new int[0];           // array to store pixels we've already t
 
 
 void setup() {
-  size(1280, 720);
+  size(1280, 720, P3D);
   //beginRecord(PDF, "my_output_" + str(random(10000)) + ".pdf");
   //img = alterImage("frames/img229.png");
   //imageMode(CORNERS);
@@ -51,28 +59,29 @@ void setup() {
   //MidiBus.list();
   myBus = new MidiBus(this, 0, 0);
 
-  String[] frames = listFileNames(sketchPath() + "/data/frames/");
-  int cnt = 0;
-  for (String frame : frames) {
-    if (cnt > 2) {
-      break;
-    }
-    img = loadImage("frames/" + frame);
+  frames = listFileNames(sketchPath() + "/data/frames/");
+  
+  //int cnt = 0;
+  //for (String frame : frames) {
+  //  if (cnt > 2) {
+  //    break;
+  //  }
+  //  img = loadImage("frames/" + frame);
 
-    img = alterImage(img);
+  //  img = alterImage(img);
     //img = simpleSort(img);
     // img = sortImage("frames/" + frame);
 
-    width = img.width;
-    height = img.height;
+    //width = img.width;
+    //height = img.height;
 
-    imageMode(CORNERS);
-    image(img, 0, 0, img.width, img.height);
-    saveFrame("editedFrames/" + frame);
-    cnt++;
-  }
+    //imageMode(CORNERS);
+    //image(img, 0, 0, img.width, img.height);
+    //saveFrame("editedFrames/" + frame);
+    //cnt++;
+  //}
 
-  noLoop();
+  //noLoop();
 }
 
 void draw() {
@@ -88,6 +97,19 @@ void draw() {
   myBus.sendControllerChange(channel, number, value); // Send a controllerChange
   midiDelay(2000);
   // ========================================
+  
+  
+  
+  // Loop between unedited frames
+  int currentFrame = frameCount % frames.length;
+  String frame = frames[currentFrame];
+  
+  img = loadImage("frames/" + frame);
+  img = simpleSort(img, threshold, density, mode);
+  
+  imageMode(CORNERS);
+  image(img, 0, 0, img.width, img.height);
+  //saveFrame("editedFrames/" + frame);
 }
 
 void keyPressed() {
@@ -133,6 +155,18 @@ void controllerChange(int channel, int number, int value) {
   println("Channel:"+channel);
   println("Number:"+number);
   println("Value:"+value);
+  
+  // Number 16 and 17 will be controlling threshold and density respectively
+  if (number == 17) {
+    threshold = int(map(value, 0, 127, 0, 100));
+    println("Outer threshold is: " + threshold);
+  }
+  
+  // Numbers 32, 33, and 34 will be controlling modes 0, 1, 2 respectively
+  if (number == 32 || number == 33 || number == 34) {
+    mode = (number-2)%3;
+    println("Mode is: " + mode);
+  }
 }
 // ====================================
 
@@ -178,11 +212,11 @@ String[] listFileNames(String dir) {
 }
 
 // PIXEL SORTING SECTION ======================================
-PImage simpleSort(PImage img) {
+PImage simpleSort(PImage img, int... params) {
   // 60, 1, 0
-  int threshold = 60;
-  int density = 1;
-  int mode = 0;
+  int threshold = params.length > 0 ? params[0] : 60;
+  int density = params.length > 1 ? params[1] : 1;
+  int mode = params.length > 2 ? params[2] : 0;
 
   //PImage img = loadImage(filename);
   for (int w=0; w<img.width*img.height; w++) {
@@ -192,7 +226,8 @@ PImage simpleSort(PImage img) {
       case 0:
         if (w > img.width) {
           if (brightness(img.pixels[w]) > threshold) {
-            img.pixels[w] = img.pixels[w-img.width];
+            //img.pixels[w] = img.pixels[w-img.width];
+            img.pixels[w] = img.pixels[w] << img.pixels[w-img.width];
           }
         }
         break;
