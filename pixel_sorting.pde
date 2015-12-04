@@ -1,18 +1,21 @@
 /* 
-  Batch pixel sorting of images.
-  
-  TO DO______
-  • Live input mode where sorting parameters are controlled through MIDI input
-  • Use shaders instead
-  • Make operations state-based rather than stateless
-  • Audio-Reactive (Max/MSP?)
-  • Alter Image should work the same irrespective of image dimensions
-*/
+ Batch pixel sorting of images.
+ 
+ TO DO______
+ • Live input mode where sorting parameters are controlled through MIDI input
+ • Use shaders instead
+ • Make operations state-based rather than stateless
+ • Audio-Reactive (Max/MSP?)
+ • Alter Image should work the same irrespective of image dimensions
+ */
 
 import processing.pdf.*;
 import themidibus.*;
+import processing.video.*;
 
+Movie myMovie;
 MidiBus myBus;
+PShader shader;
 
 PImage img;
 
@@ -58,9 +61,12 @@ void setup() {
   // MIDI STUFF ==================
   //MidiBus.list();
   myBus = new MidiBus(this, 0, 0);
+  shader = loadShader("pixelate.glsl");
+  //myMovie = new Movie(this, "footage.mp4");
+  //myMovie.loop();
 
   frames = listFileNames(sketchPath() + "/data/frames/");
-  
+
   //int cnt = 0;
   //for (String frame : frames) {
   //  if (cnt > 2) {
@@ -69,16 +75,16 @@ void setup() {
   //  img = loadImage("frames/" + frame);
 
   //  img = alterImage(img);
-    //img = simpleSort(img);
-    // img = sortImage("frames/" + frame);
+  //img = simpleSort(img);
+  // img = sortImage("frames/" + frame);
 
-    //width = img.width;
-    //height = img.height;
+  //width = img.width;
+  //height = img.height;
 
-    //imageMode(CORNERS);
-    //image(img, 0, 0, img.width, img.height);
-    //saveFrame("editedFrames/" + frame);
-    //cnt++;
+  //imageMode(CORNERS);
+  //image(img, 0, 0, img.width, img.height);
+  //saveFrame("editedFrames/" + frame);
+  //cnt++;
   //}
 
   //noLoop();
@@ -91,22 +97,29 @@ void draw() {
   int velocity = 127;
   int number = 0;
   int value = 90;
-  myBus.sendNoteOn(channel, pitch, velocity); // Send a Midi noteOn
-  delay(200);
-  myBus.sendNoteOff(channel, pitch, velocity); // Send a Midi nodeOff
+  //myBus.sendNoteOn(channel, pitch, velocity); // Send a Midi noteOn
+  //delay(200);
+  //myBus.sendNoteOff(channel, pitch, velocity); // Send a Midi nodeOff
   myBus.sendControllerChange(channel, number, value); // Send a controllerChange
-  midiDelay(2000);
+  //midiDelay(2000);
   // ========================================
-  
-  
-  
+
+
+
   // Loop between unedited frames
   int currentFrame = frameCount % frames.length;
   String frame = frames[currentFrame];
-  
+
   img = loadImage("frames/" + frame);
-  img = simpleSort(img, threshold, density, mode);
   
+  // Using shaders
+  //shader.set("step", 1.0/float(width), 1.0/float(height));
+  //shader.set("srcTex", myMovie);
+  //shader(shader);
+  //rect(0, 0, width, height);
+  
+  img = simpleSort(img, threshold, density, mode);
+
   imageMode(CORNERS);
   image(img, 0, 0, img.width, img.height);
   //saveFrame("editedFrames/" + frame);
@@ -117,6 +130,11 @@ void keyPressed() {
     endRecord();
     exit();
   }
+}
+
+// Called every time a new frame is available to read
+void movieEvent(Movie m) {
+  m.read();
 }
 
 // MIDI STUFF ============================
@@ -155,13 +173,13 @@ void controllerChange(int channel, int number, int value) {
   println("Channel:"+channel);
   println("Number:"+number);
   println("Value:"+value);
-  
+
   // Number 16 and 17 will be controlling threshold and density respectively
   if (number == 17) {
     threshold = int(map(value, 0, 127, 0, 100));
     println("Outer threshold is: " + threshold);
   }
-  
+
   // Numbers 32, 33, and 34 will be controlling modes 0, 1, 2 respectively
   if (number == 32 || number == 33 || number == 34) {
     mode = (number-2)%3;
